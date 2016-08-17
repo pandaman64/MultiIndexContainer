@@ -1,0 +1,6 @@
+[package]
+name = "container"
+version = "0.1.0"
+authors = ["pandaman64 <kointosudesuyo@infoseek.jp>"]
+
+[dependencies]
