@@ -13,6 +13,10 @@ struct Node<T> {
     next: Link<T>,
 }
 
+struct Iter<'a, T: 'a> {
+    head: &'a Link<T>,
+}
+
 impl<T> SequencedList<T> {
     fn new() -> SequencedList<T> {
         SequencedList::<T> {
@@ -54,6 +58,10 @@ impl<T> SequencedList<T> {
         } else {
             Some(&self.head.as_ref().unwrap().nth(index).value)
         }
+    }
+
+    fn iter(&self) -> Iter<T> {
+        Iter::<T>::new(&self.head)
     }
 
     fn clear(&mut self) {
@@ -109,6 +117,26 @@ impl<T> Node<T> {
     }
 }
 
+impl<'a, T> Iter<'a, T> {
+    fn new(head: &'a Link<T>) -> Self {
+        Iter::<T> { head: head }
+    }
+}
+
+impl<'a, T> Iterator for Iter<'a, T> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.head.is_none() {
+            None
+        } else {
+            let reference = std::mem::replace(&mut self.head,
+                                              &(**self.head.as_ref().unwrap()).next);
+            Some(&(*reference.as_ref().unwrap()).value)
+        }
+    }
+}
+
 fn main() {
     let mut list = SequencedList::<i32>::new();
     let mut list2 = SequencedList::<i32>::new();
@@ -128,7 +156,17 @@ fn main() {
     list.clear();
     println!("cleared. is_empty() = {}", list.is_empty());
 
+    list.push_back(3);
+    list.push_back(4);
+    list.push_back(5);
+    list2.push_front(2);
+    list2.push_front(1);
+
     list2.append(&mut list);
 
     println!("{} {}", list.len(), list2.len());
+
+    for v in list2.iter() {
+        println!("{}", v);
+    }
 }
