@@ -22,25 +22,25 @@ impl<T> SequencedList<T> {
         }
     }
 
-    fn push_front(&mut self,val: T){
+    fn push_front(&mut self, val: T) {
         self.length += 1;
-        if self.head.is_none(){
-        let mut node = Box::new(Node::new(val));
+        if self.head.is_none() {
+            let mut node = Box::new(Node::new(val));
             self.tail = Some(node.borrow_mut() as *mut Node<T>);
             self.head = Some(node);
-        }
-        else{
+        } else {
             let mut node = Box::new(Node::new(val));
-            std::mem::swap(&mut node.next,&mut self.head);
-            std::mem::swap(&mut self.head,&mut Some(node));
+            std::mem::swap(&mut node.next, &mut self.head);
+            std::mem::swap(&mut self.head, &mut Some(node));
         }
     }
 
     fn push_back(&mut self, val: T) {
         self.length += 1;
         if self.head.is_none() {
-            self.head = Some(Box::new(Node::new(val)));
-            self.tail = Some(self.head.as_mut().unwrap().borrow_mut() as *mut Node<T>);
+            let mut node = Box::new(Node::new(val));
+            self.tail = Some(node.borrow_mut() as *mut Node<T>);
+            self.head = Some(node);
         } else {
             unsafe {
                 self.tail = (**self.tail.as_ref().unwrap()).insert_next(val);
@@ -56,17 +56,17 @@ impl<T> SequencedList<T> {
         }
     }
 
-    fn clear(&mut self){
+    fn clear(&mut self) {
         self.head = None;
         self.tail = None;
         self.length = 0;
     }
 
-    fn len(&self) -> usize{
+    fn len(&self) -> usize {
         self.length
     }
 
-    fn is_empty(&self) -> bool{
+    fn is_empty(&self) -> bool {
         self.length == 0
     }
 }
@@ -108,7 +108,7 @@ fn main() {
              list.get(2),
              list.get(3),
              list.get(4));
-    println!("length = {}",list.len());
+    println!("length = {}", list.len());
     list.clear();
-    println!("cleared. is_empty() = {}",list.is_empty());
+    println!("cleared. is_empty() = {}", list.is_empty());
 }
