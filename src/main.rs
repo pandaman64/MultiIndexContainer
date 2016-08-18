@@ -69,6 +69,21 @@ impl<T> SequencedList<T> {
     fn is_empty(&self) -> bool {
         self.length == 0
     }
+
+    fn append(&mut self, other: &mut Self) {
+        if let Some(tail) = self.tail {
+            self.length += other.length;
+            other.length = 0;
+            unsafe {
+                std::mem::swap(&mut (*tail).next, &mut other.head);
+            }
+            other.tail = None;
+        } else {
+            std::mem::swap(&mut self.head, &mut other.head);
+            std::mem::swap(&mut self.tail, &mut other.tail);
+            std::mem::swap(&mut self.length, &mut other.length);
+        }
+    }
 }
 
 impl<T> Node<T> {
@@ -96,6 +111,7 @@ impl<T> Node<T> {
 
 fn main() {
     let mut list = SequencedList::<i32>::new();
+    let mut list2 = SequencedList::<i32>::new();
     list.push_back(3);
     list.push_front(2);
     list.push_back(4);
@@ -111,4 +127,8 @@ fn main() {
     println!("length = {}", list.len());
     list.clear();
     println!("cleared. is_empty() = {}", list.is_empty());
+
+    list2.append(&mut list);
+
+    println!("{} {}", list.len(), list2.len());
 }
