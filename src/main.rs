@@ -67,6 +67,14 @@ impl<T> SequencedList<T> {
         Iter::<T>::new(self.length, &self.head, self.tail)
     }
 
+    fn front(&self) -> Option<&T> {
+        self.head.as_ref().map(|b| &(**b).value)
+    }
+
+    fn back(&self) -> Option<&T> {
+        unsafe { self.tail.as_ref().map(|&ptr| &(*ptr).value) }
+    }
+
     fn clear(&mut self) {
         self.head = None;
         self.tail = None;
@@ -193,6 +201,11 @@ fn main() {
     list2.append(&mut list);
 
     println!("{} {}", list.len(), list2.len());
+
+    assert_eq!(Some(&1), list2.front());
+    assert_eq!(Some(&5), list2.back());
+    assert_eq!(None, list.front());
+    assert_eq!(None, list.back());
 
     for v in list2.iter() {
         println!("{}", v);
