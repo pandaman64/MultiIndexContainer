@@ -11,10 +11,13 @@ type Link<T> = Option<Box<Node<T>>>;
 struct Node<T> {
     value: T,
     next: Link<T>,
+    prev: Option<*mut Node<T>>,
 }
 
 struct Iter<'a, T: 'a> {
+    length: usize,
     head: &'a Link<T>,
+    tail: Option<*mut Node<T>>,
 }
 
 impl<T> SequencedList<T> {
@@ -61,7 +64,7 @@ impl<T> SequencedList<T> {
     }
 
     fn iter(&self) -> Iter<T> {
-        Iter::<T>::new(&self.head)
+        Iter::<T>::new(self.length, &self.head, self.tail)
     }
 
     fn clear(&mut self) {
@@ -85,6 +88,7 @@ impl<T> SequencedList<T> {
             unsafe {
                 std::mem::swap(&mut (*tail).next, &mut other.head);
             }
+            self.tail = other.tail;
             other.tail = None;
         } else {
             std::mem::swap(&mut self.head, &mut other.head);
@@ -99,12 +103,14 @@ impl<T> Node<T> {
         Node::<T> {
             value: val,
             next: None,
+            prev: None,
         }
     }
 
     fn insert_next(&mut self, next_val: T) -> Option<*mut Self> {
-        let next = Some(Box::new(Self::new(next_val)));
-        self.next = next;
+        let mut next = Box::new(Self::new(next_val));
+        next.prev = Some(self as *mut Self);
+        self.next = Some(next);
         Some(self.next.as_mut().unwrap().borrow_mut() as *mut Self)
     }
 
@@ -118,8 +124,12 @@ impl<T> Node<T> {
 }
 
 impl<'a, T> Iter<'a, T> {
-    fn new(head: &'a Link<T>) -> Self {
-        Iter::<T> { head: head }
+    fn new(length: usize, head: &'a Link<T>, tail: Option<*mut Node<T>>) -> Self {
+        Iter::<T> {
+            length: length,
+            head: head,
+            tail: tail,
+        }
     }
 }
 
@@ -127,15 +137,33 @@ impl<'a, T> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.head.is_none() {
+        if self.length == 0 {
             None
         } else {
+            self.length -= 1;
             let reference = std::mem::replace(&mut self.head,
                                               &(**self.head.as_ref().unwrap()).next);
             Some(&(*reference.as_ref().unwrap()).value)
         }
     }
 }
+
+impl<'a, T: std::fmt::Debug> DoubleEndedIterator for Iter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.length == 0 {
+            None
+        } else {
+            self.length -= 1;
+            let ret = unsafe { Some(&(*(*self.tail.as_ref().unwrap())).value) };
+            unsafe {
+                self.tail = (**self.tail.as_ref().unwrap()).prev;
+            }
+            ret
+        }
+    }
+}
+
+
 
 fn main() {
     let mut list = SequencedList::<i32>::new();
@@ -169,4 +197,13 @@ fn main() {
     for v in list2.iter() {
         println!("{}", v);
     }
+
+    let mut iter = list2.iter();
+    assert_eq!(Some(&1), iter.next());
+    assert_eq!(Some(&2), iter.next());
+    assert_eq!(Some(&5), iter.next_back());
+    assert_eq!(Some(&4), iter.next_back());
+    assert_eq!(Some(&3), iter.next());
+    assert_eq!(None, iter.next());
+    assert_eq!(None, iter.next_back());
 }
