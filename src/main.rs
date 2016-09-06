@@ -1,57 +1,25 @@
-mod binary_heap;
-use binary_heap::BinaryHeap;
+mod btree;
+use btree::Btree;
+
+extern crate rand;
+use rand::Rng;
+use rand::StdRng;
+use rand::SeedableRng;
+
+use std::iter::Iterator;
 
 fn main() {
-    let mut list = BinaryHeap::<i32>::new();
-    let mut list2 = BinaryHeap::<i32>::new();
-    list.push(3);
-    list.push(2);
-    list.push(4);
-    list.push(5);
-    list.push(6);
-
-    println!("length = {}", list.len());
-    assert_eq!(Some(&6), list.peek());
-    assert_eq!(Some(6), list.pop());
-    assert_eq!(Some(5), list.pop());
-    assert_eq!(Some(4), list.pop());
-    assert_eq!(Some(3), list.pop());
-    assert_eq!(Some(2), list.pop());
-    assert_eq!(None, list.peek());
-    println!("length = {}", list.len());
-    println!("is_empty() = {}", list.is_empty());
-
-    list.push(2);
-    list.push(4);
-    list.push(3);
-    list2.push(5);
-    list2.push(1);
-
-    list2.append(&mut list);
-
-    println!("{} {}", list.len(), list2.len());
-
-    assert_eq!(Some(5), list2.pop());
-    assert_eq!(Some(4), list2.pop());
-    assert_eq!(Some(3), list2.pop());
-    assert_eq!(Some(2), list2.pop());
-    assert_eq!(Some(1), list2.pop());
-    assert_eq!(None, list2.pop());
-    assert_eq!(None, list2.pop());
-
-    list.push(3);
-    list.push(2);
-    list.push(4);
-    list.push(5);
-    list.push(6);
-
-    for v in list.iter() {
-        println!("{}", v);
+    let mut tree = Btree::<i32>::new();
+    let seed: &[_] = &[1];
+    let mut rng: StdRng = rand::SeedableRng::from_seed(seed);
+    let mut range = (0..100).collect::<Vec<_>>();
+    // rng.shuffle(&mut range);
+    for i in range.into_iter() {
+        tree.insert(i);
+        println!("{:?}", tree);
     }
-
-    list.clear();
-
-    for v in list.iter() {
-        println!("{}", v);
-    }
+    // for v in tree.iter() {
+    // println!("{}", v);
+    // }
+    //
 }
