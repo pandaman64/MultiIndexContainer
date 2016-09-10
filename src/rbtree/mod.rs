@@ -1,21 +1,27 @@
+use std::mem::swap;
+use std::mem::replace;
+use std::cmp::Ordering;
 
-
-struct Rbtree<T: Ord>{
-    root: Link<T>,
-    count: usize
-}
-
-type Link<T> = Box<Node<T>>;
-
+#[derive(Debug)]
 enum Node<T: Ord>{
     Leaf,
     Internal(Internal<T>)
 }
 
+type Link<T> = Box<Node<T>>;
+
+#[derive(Debug)]
 struct Internal<T: Ord>{
     color: Color,
     left: Link<T>,
     right: Link<T>,
+    value: T
+}
+
+#[derive(Debug)]
+pub struct Rbtree<T: Ord>{
+    root: Link<T>,
+    count: usize
 }
 
 enum InsertionResult{
@@ -24,29 +30,66 @@ enum InsertionResult{
     NoProblem
 }
 
+#[derive(Clone,Copy,PartialEq,Eq,Debug)]
 enum Color{
     Red,
     Black
 }
 
+#[derive(Debug)]
+pub struct Iter<'a,T: Ord + 'a>{
+    stack: Vec<&'a Internal<T>>
+}
+
+impl<'a,T: Ord + 'a> Iter<'a,T>{
+    fn new(tree: &'a Rbtree<T>) -> Self{
+        let mut iter = Iter{
+            stack: vec![]
+        };
+        iter.push(&tree.root);
+        iter
+    }
+
+    fn push(&mut self,mut node: &'a Link<T>){
+        while let &Node::Internal(ref internal) = node as &Node<T>{
+            self.stack.push(internal);
+            node = &internal.left;
+        }
+    }
+}
+
+impl<'a,T: Ord + 'a> Iterator for Iter<'a,T>{
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item>{
+        if let Some(node) = self.stack.pop(){
+            self.push(&node.right);
+            Some(&node.value)
+        }
+        else{
+            None
+        }
+    }
+}
+
 impl<T: Ord> Rbtree<T>{
-    fn new() -> Self{
+    pub fn new() -> Self{
         Rbtree{
             root: Node::leaf(),
             count: 0
         }
     }
 
-    fn insert(&mut self,value: T){
-        match self.root.insert(value){
+    pub fn iter(&self) -> Iter<T>{
+        Iter::new(self)
+    }
+
+    pub fn insert(&mut self,value: T){
+        self.count += 1;
+        match insert(&mut self.root,value){
             InsertionResult::NoProblem => {},
             InsertionResult::Inserted => {
-                if let &mut Internal(ref node) = &mut self.root{
-                    node.color = Color::Black;
-                }
-                else{
-                    panic!("why leaf here");
-                }
+                self.root.unwrap_internal_mut().color = Color::Black;
             },
             InsertionResult::RequireRebalance => panic!("zettai ni okoran")
         }
@@ -74,68 +117,8 @@ impl<T: Ord> Node<T>{
         }
     }
 
-    fn insert(self: &mut Link<T>,value: T) -> InsertionResult{
-        match self{
-            &mut Node::Leaf => {
-                replace(self,Node::internal(value));
-                InsertionResult::Inserted
-            },
-            &mut Node::Internal(ref mut node) => {
-                match value.cmp(&node.value){
-                    Ordering::Equal => panic!("key juuhuku"),
-                    Ordering::Less => {
-                        match node.left.insert(value){
-                            InsertionResult::NoProblem => InsertionResult::NoProblem,
-                            InsertionResult::Inserted => {
-                                if self.color() == Color::Red{
-                                    InsertionResult::RequireRebalance
-                                }
-                                else{
-                                    InsertionResult::NoProblem
-                                }
-                            },
-                            InsertionResult::RequireRebalance => {
-                                let child = &mut node.left;
-                                node.color = Color::Red;
-                                child.unwrap_internal_mut().color = Color::Black;
-                                if child.unwrap_internal_mut().right.color() == Color::Red{
-                                    child.left_rotate();
-                                }
-                                self.right_rotate();
-                                InsertionResult::NoProblem
-                            }
-                        }
-                    },
-                    Ordering::Greater => {
-                        match node.left.insert(value){
-                            InsertionResult::NoProblem => InsertionResult::NoProblem,
-                            InsertionResult::Inserted => {
-                                if self.color() == Color::Red{
-                                    InsertionResult::RequireRebalance
-                                }
-                                else{
-                                    InsertionResult::NoProblem
-                                }
-                            },
-                            InsertionResult::RequireRebalance => {
-                                let child = &mut node.right;
-                                node.color = Color::Red;
-                                child.unwrap_internal_mut().color = Color::Black;
-                                if child.unwrap_internal_mut().left.color() == Color::Red{
-                                    child.right_rotate();
-                                }
-                                self.left_rotate();
-                                InsertionResult::NoProblem
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    fn unwrap_internal_mut(self: &mut Link<T>) -> &mut Internal{
-        if let &mut Internal(ref node) = self{
+    fn unwrap_internal_mut(&mut self) -> &mut Internal<T>{
+        if let &mut Node::Internal(ref mut node) = self{
             node
         }
         else{
@@ -143,7 +126,97 @@ impl<T: Ord> Node<T>{
         }
     }
 
-    fn left_rotate(self: &mut Link<T>){
-
+    fn is_internal(&self) -> bool{
+        if let &Node::Internal(_) = self{
+            true
+        }
+        else{
+            false
+        }
     }
 }
+
+    fn insert<T: Ord>(this: &mut Link<T>,value: T) -> InsertionResult{
+        let is_left;
+        if this.is_internal(){
+            let node = this.unwrap_internal_mut();
+            match value.cmp(&node.value){
+                Ordering::Equal => panic!("key juuhuku"),
+                Ordering::Less => {
+                    match insert(&mut node.left,value){
+                        InsertionResult::NoProblem => return InsertionResult::NoProblem,
+                        InsertionResult::Inserted => {
+                            if node.color == Color::Red{
+                                return InsertionResult::RequireRebalance;
+                            }
+                            else{
+                                return InsertionResult::NoProblem;
+                            }
+                        },
+                        InsertionResult::RequireRebalance => {
+                            let child = &mut node.left;
+                            node.color = Color::Red;
+                            child.unwrap_internal_mut().color = Color::Black;
+                            if child.unwrap_internal_mut().right.color() == Color::Red{
+                                left_rotate(child);
+                            }
+                            is_left = false;
+                        }
+                    }
+                },
+                Ordering::Greater => {
+                    match insert(&mut node.right,value){
+                        InsertionResult::NoProblem => return InsertionResult::NoProblem,
+                        InsertionResult::Inserted => {
+                            if node.color == Color::Red{
+                                return InsertionResult::RequireRebalance;
+                            }
+                            else{
+                                return InsertionResult::NoProblem;
+                            }
+                        },
+                        InsertionResult::RequireRebalance => {
+                            let child = &mut node.right;
+                            node.color = Color::Red;
+                            child.unwrap_internal_mut().color = Color::Black;
+                            if child.unwrap_internal_mut().left.color() == Color::Red{
+                                right_rotate(child);
+                            }
+                            is_left = true;
+                        }
+                    }
+                }
+            }
+        }
+        else{
+            replace(this,Node::internal(value));
+            return InsertionResult::Inserted;
+        }
+
+        if is_left{
+            left_rotate(this);
+        }
+        else{
+            right_rotate(this);
+        }
+        InsertionResult::NoProblem
+    }
+
+    fn left_rotate<T: Ord>(this: &mut Link<T>){
+        let child = {
+            let child = &mut this.unwrap_internal_mut().right;
+            let grand_child = replace(&mut child.unwrap_internal_mut().left,Node::leaf());
+            &mut replace(child,grand_child)
+        };
+        swap(this,child);
+    }
+    
+    fn right_rotate<T: Ord>(this: &mut Link<T>){
+         let child = {
+            let child = &mut this.unwrap_internal_mut().left;
+            let grand_child = replace(&mut child.unwrap_internal_mut().right,Node::leaf());
+            &mut replace(child,grand_child)
+        };
+        swap(this,child);
+    }
+
