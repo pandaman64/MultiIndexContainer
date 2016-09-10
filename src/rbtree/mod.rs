@@ -48,7 +48,7 @@ impl<T: Ord> Rbtree<T>{
                     panic!("why leaf here");
                 }
             },
-            InsertionResult::RequireRebalance => unimplemented!()
+            InsertionResult::RequireRebalance => panic!("zettai ni okoran")
         }
     }
 }
@@ -94,7 +94,16 @@ impl<T: Ord> Node<T>{
                                     InsertionResult::NoProblem
                                 }
                             },
-                            InsertionResult::RequireRebalance => unimplemented!()
+                            InsertionResult::RequireRebalance => {
+                                let child = &mut node.left;
+                                node.color = Color::Red;
+                                child.unwrap_internal_mut().color = Color::Black;
+                                if child.unwrap_internal_mut().right.color() == Color::Red{
+                                    child.left_rotate();
+                                }
+                                self.right_rotate();
+                                InsertionResult::NoProblem
+                            }
                         }
                     },
                     Ordering::Greater => {
@@ -108,11 +117,33 @@ impl<T: Ord> Node<T>{
                                     InsertionResult::NoProblem
                                 }
                             },
-                            InsertionResult::RequireRebalance => unimplemented!()
+                            InsertionResult::RequireRebalance => {
+                                let child = &mut node.right;
+                                node.color = Color::Red;
+                                child.unwrap_internal_mut().color = Color::Black;
+                                if child.unwrap_internal_mut().left.color() == Color::Red{
+                                    child.right_rotate();
+                                }
+                                self.left_rotate();
+                                InsertionResult::NoProblem
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    fn unwrap_internal_mut(self: &mut Link<T>) -> &mut Internal{
+        if let &mut Internal(ref node) = self{
+            node
+        }
+        else{
+            panic!("not a internal")
+        }
+    }
+
+    fn left_rotate(self: &mut Link<T>){
+
     }
 }
