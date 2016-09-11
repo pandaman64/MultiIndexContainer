@@ -1,5 +1,5 @@
-//mod btree;
-//use btree::Btree;
+// mod btree;
+// use btree::Btree;
 
 mod rbtree;
 use rbtree::Rbtree;
@@ -16,7 +16,7 @@ fn main() {
     let mut tree = Rbtree::<i32>::new();
     let seed: &[_] = &[1];
     let mut rng: StdRng = rand::SeedableRng::from_seed(seed);
-    let mut range = (0..std::env::args().nth(1).unwrap().parse::<i32>().unwrap()).collect::<Vec<_>>();
+    let mut range = (0..100).collect::<Vec<_>>();
     rng.shuffle(&mut range);
     for i in range.into_iter() {
         tree.insert(i);
@@ -25,4 +25,3 @@ fn main() {
         println!("{}", v);
     }
 }
-
